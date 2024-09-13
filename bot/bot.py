@@ -12,12 +12,17 @@ async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     # Get updated referral count
     referrals = get_user_data(user_id)
 
-    # Check if the user has 5 or more referrals
-    if query.data == 'generate_referral':
+   # Check if the user has 5 or more referrals
+if query.data == 'generate_referral':
+    # Handle the case when the user does not have a username
+    if username is None:
+        username = str(user_id)
+    
     # Generate and send referral link
     referral_link = f"https://t.me/AaveTokenbot?start=referral_{username}"
     await query.answer()
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Your referral link is: {referral_link}")
+
     elif referrals >= 5:
         # Redirect to your website if the user has enough referrals
         await query.answer()
