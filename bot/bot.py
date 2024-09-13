@@ -62,7 +62,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     # Send image with the airdrop description
-    with open('aaveicon.jpg', 'rb') as img:  # Replace 'airdrop.jpg' with your file path and name
+    with open('/root/aavebot/bot/aaveicon.jpg', 'rb') as img:  # Replace 'airdrop.jpg' with your file path and name
         await context.bot.send_photo(chat_id=update.effective_chat.id, photo=InputFile(img), caption=f"Welcome! You currently have {referrals} referrals. Invite 5 friends to unlock your claim.", reply_markup=reply_markup)
 
 def main():
