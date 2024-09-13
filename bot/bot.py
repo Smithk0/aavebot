@@ -18,7 +18,7 @@ async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             username = str(user_id)
 
         # Generate and send referral link
-        referral_link = f"https://t.me/AaveTokenbot?start=referral_{username}"
+        referral_link = f"https://t.me/AAVEclaim_bot?start=referral_{username}"
         await query.answer()
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Your referral link is: {referral_link}")
 
