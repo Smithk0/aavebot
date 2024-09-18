@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, Filters
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users, load_db
 import logging
 
@@ -150,7 +150,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click_handler))
-    application.add_handler(MessageHandler(Filters.text & ~Filters.command, message_handler))  # Added message handler
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))  # Added message handler
 
     logger.info("Bot is starting...")
     application.run_polling()
