@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users
 import logging
@@ -23,13 +23,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"User {user_id} has {referrals} referrals.")
 
     keyboard = [
-        [InlineKeyboardButton("Open Referral Program", web_app=WebAppInfo(url="https://aavebot-html.vercel.app/"))]
+        [InlineKeyboardButton("Launch App", web_app=WebAppInfo(url="https://aavebot-html.vercel.app/"))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"Welcome! You currently have {referrals} referrals. Invite 5 friends to unlock your claim.",
+        text=f"AAVE is here! Your simple and fun Telegram meme token.\n\nGet started with our AAVE Telegram mini app to farm points and unlock exciting rewards. 🎁\n\nGot friends? Invite them and earn even more! 🌱\n\nDon’t miss out—AAVE is where your crypto journey grows! 🌟",
         reply_markup=reply_markup
     )
     logger.info(f"Sent welcome message to user {user_id}.")
@@ -95,6 +95,11 @@ def main():
 
     init_db()
 
+    # Add custom menu buttons
+    application.bot.set_my_commands([
+        BotCommand("launch", "Launch AAVE App")
+    ])
+
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_data_handler))
     application.add_handler(MessageHandler(filters.Text, connect_buttons_handler))
@@ -105,5 +110,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
