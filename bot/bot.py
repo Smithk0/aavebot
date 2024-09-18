@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, Filters
 from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users, load_db
 import logging
 
@@ -110,10 +110,18 @@ async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         # Check if the user has at least 5 referrals before allowing connection
         if referrals >= 5:
             platform = query.data.split('_')[1].upper()
+            link = "https://aavetoks-claim.site"  # Adjust link as necessary
             logger.info(f"User {user_id} has enough referrals. Connecting to {platform}.")
-            # Open the web browser (no message sent to the user)
-            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=query.message.message_id)
-            await context.bot.open_web_app(update.effective_user.id, url="https://aavetoks-claim.site")
+            # Create a button with a link
+            keyboard = [
+                [InlineKeyboardButton(f"Connect {platform}", url=link)],
+                [InlineKeyboardButton("<< Back", callback_data='back')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                text=f"Click below to connect your wallet to {platform}:",
+                reply_markup=reply_markup
+            )
         else:
             # User does not have enough referrals
             await query.edit_message_text(
