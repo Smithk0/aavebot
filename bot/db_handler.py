@@ -1,7 +1,7 @@
 import json
 import os
 
-DB_FILE = "data/db.json"
+DB_FILE = "data/ne.json"
 DB_DIR = "data"
 
 def init_db():
