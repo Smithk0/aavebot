@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users
+from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users, load_db
 import logging
 
 # Set up logging to print debug information
@@ -19,8 +19,8 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, cle
     keyboard = [
         [InlineKeyboardButton("💰 Check Wallet", callback_data='check_wallet'), InlineKeyboardButton("🔗 My Referral Link", callback_data='generate_referral')],
         [InlineKeyboardButton("📋 Referral List", callback_data='referral_list')],
-        [InlineKeyboardButton("🔌 Connect TON", callback_data='connect_ton'), InlineKeyboardButton("🔌 Connect ETH", callback_data='connect_eth')],
-        [InlineKeyboardButton("🔌 Connect TRON", callback_data='connect_tron')],
+        [InlineKeyboardButton("💎 Connect TON", callback_data='connect_ton'), InlineKeyboardButton("💎 Connect ETH", callback_data='connect_eth')],
+        [InlineKeyboardButton("💎 Connect TRON", callback_data='connect_tron')],
         [InlineKeyboardButton("👥 Join Community", url="https://t.me/JoinAave")]  # Moved to the bottom
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -45,16 +45,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if the user is being referred
     if context.args and context.args[0].startswith('referral_'):
         referrer_username = context.args[0].split('_')[1]
-        referrer_user_id = None
+        referrer_user = None
 
-        # Find the referrer in the database
-        data = get_user_data(user_id)
-        for user in data['users']:
+        # Load the entire database
+        data = load_db()
+        for user in data.get('users', []):
             if user['username'] == referrer_username:
-                referrer_user_id = user['user_id']
+                referrer_user = user
                 break
 
-        if referrer_user_id:
+        if referrer_user:
+            referrer_user_id = referrer_user['user_id']
             # Update referrer's referrals
             update_referrals(referrer_user_id, username)
 
@@ -143,5 +144,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-    

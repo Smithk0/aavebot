@@ -12,10 +12,14 @@ def init_db():
             json.dump({"users": []}, db_file)
 
 def load_db():
+    if not os.path.exists(DB_FILE):
+        init_db()  # Initialize the database if it does not exist
     with open(DB_FILE, 'r') as db_file:
         return json.load(db_file)
 
 def save_db(data):
+    if 'users' not in data:
+        data['users'] = []  # Ensure the 'users' key is present
     with open(DB_FILE, 'w') as db_file:
         json.dump(data, db_file, indent=4)
 
@@ -23,7 +27,7 @@ def add_or_update_user(user_id, username):
     data = load_db()
     user_found = False
 
-    for user in data['users']:
+    for user in data.get('users', []):
         if user['user_id'] == user_id:
             user['username'] = username
             user_found = True
@@ -41,7 +45,7 @@ def add_or_update_user(user_id, username):
 
 def update_referrals(user_id, referred_user):
     data = load_db()
-    for user in data['users']:
+    for user in data.get('users', []):
         if user['user_id'] == user_id:
             user['referrals'] += 1
             user['referred_users'].append(referred_user)
@@ -51,10 +55,11 @@ def update_referrals(user_id, referred_user):
 
 def get_user_data(user_id):
     data = load_db()
-    for user in data['users']:
+    for user in data.get('users', []):
         if user['user_id'] == user_id:
             return user
-    return {"referrals": 0, "referred_users": []}
+    # Return a default user object if the user is not found
+    return {"user_id": user_id, "username": "", "referrals": 0, "referred_users": []}
 
 def get_referred_users(user_id):
     user = get_user_data(user_id)
