@@ -3,7 +3,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users
 import logging
 
-# Set up logging to print debug information
+# Set up logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -34,7 +34,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     logger.info(f"Sent welcome message to user {user_id}.")
 
-# Function to handle data sent from WebApp
+# Function to handle WebApp data sent from the frontend
 async def webapp_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.web_app_data:
         user_id = update.effective_user.id
@@ -45,7 +45,7 @@ async def webapp_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         if data == 'generate_referral':
             username = update.effective_user.username or str(user_id)
             referral_link = f"https://t.me/AAVEclaim_bot?start=referral_{username}"
-            
+
             # Send referral link to the user
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -90,6 +90,7 @@ async def connect_buttons_handler(update: Update, context: ContextTypes.DEFAULT_
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Unhandled message received: {update}")
 
+# Main function to start the bot
 def main():
     application = ApplicationBuilder().token("7212377554:AAEQhO0o3djcL03N_vCtlwD48IBrLK-2yIg").build()
 
