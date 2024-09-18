@@ -10,25 +10,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Function to handle /start command
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    username = update.effective_user.username
-
-    logger.info(f"User {user_id} started the bot with username: {username}")
-
-    add_or_update_user(user_id, username)
-
-    # Define the keyboard layout with two buttons on each line
+# Function to show the main menu
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("Check Wallet", callback_data='check_wallet'), InlineKeyboardButton("Generate Referral Link", callback_data='generate_referral')],
-        [InlineKeyboardButton("Referral List", callback_data='referral_list'), InlineKeyboardButton("Join Community", url="https://t.me/YourCommunityLink")],
+        [InlineKeyboardButton("Check Wallet", callback_data='check_wallet'), InlineKeyboardButton("My Referral Link", callback_data='generate_referral')],
+        [InlineKeyboardButton("Referral List", callback_data='referral_list'), InlineKeyboardButton("Join Community", url="https://t.me/JoinAave")],
         [InlineKeyboardButton("Connect TON", callback_data='connect_ton'), InlineKeyboardButton("Connect ETH", callback_data='connect_eth')],
         [InlineKeyboardButton("Connect TRON", callback_data='connect_tron')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Updated message format
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=(
@@ -40,49 +31,68 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-    logger.info(f"Sent welcome message to user {user_id}.")
+# Function to handle /start command
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    username = update.effective_user.username
 
-# Callback handler for button clicks
+    logger.info(f"User {user_id} started the bot with username: {username}")
+
+    add_or_update_user(user_id, username)
+    await show_main_menu(update, context)
+
+# Function to handle button clicks
 async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()  # Acknowledge the callback
-
     user_id = update.effective_user.id
 
-    if query.data == 'generate_referral':
-        username = update.effective_user.username or str(user_id)
-        referral_link = f"https://t.me/AAVEclaim_bot?start=referral_{username}"
-        await query.edit_message_text(text=f"Your referral link is: {referral_link}")
-
-        referred_users = get_referred_users(user_id)
-        referred_users_list = "\n".join([f"- {user}" for user in referred_users]) or "No referred users yet."
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"Referred Users:\n{referred_users_list}"
-        )
-        logger.info(f"Sent referral link and referred users to user {user_id}.")
-
-    elif query.data == 'check_wallet':
+    if query.data == 'check_wallet':
+        # Show wallet balance based on referrals
         user_data = get_user_data(user_id)
         referrals = user_data['referrals']
         balance = referrals * 22  # Assuming 22 $AAVE per referral
-        if referrals >= 5:
-            await query.edit_message_text(text=f"You have {balance} $AAVE tokens.")
-        else:
-            await query.edit_message_text(text="You need at least 5 referrals to unlock rewards.")
+        await query.edit_message_text(
+            text=f"Your current balance is {balance} $AAVE from {referrals} referrals.",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("<< Back", callback_data='back')]])
+        )
         logger.info(f"Checked wallet for user {user_id}. Referrals: {referrals}, Balance: {balance}.")
 
+    elif query.data == 'generate_referral':
+        # Show user's referral link
+        username = update.effective_user.username or str(user_id)
+        referral_link = f"https://t.me/AAVEclaim_bot?start=referral_{username}"
+        await query.edit_message_text(
+            text=f"Your referral link is: {referral_link}",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("<< Back", callback_data='back')]])
+        )
+        logger.info(f"Sent referral link to user {user_id}: {referral_link}.")
+
     elif query.data == 'referral_list':
+        # Show list of referred users
         referred_users = get_referred_users(user_id)
+        total_referred = len(referred_users)
         referred_users_list = "\n".join([f"- {user}" for user in referred_users]) or "No referred users yet."
-        await query.edit_message_text(text=f"Referred Users:\n{referred_users_list}")
+        await query.edit_message_text(
+            text=f"Total Referred: {total_referred}\n\nReferred Users:\n{referred_users_list}",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("<< Back", callback_data='back')]])
+        )
         logger.info(f"Sent referred users list to user {user_id}.")
 
     elif query.data.startswith('connect_'):
+        # Handle connection to TON, ETH, TRON
         platform = query.data.split('_')[1].upper()
-        await query.edit_message_text(text=f"Connecting to {platform}...")
+        await query.edit_message_text(
+            text=f"Connecting to {platform}...",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("<< Back", callback_data='back')]])
+        )
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Redirecting to the connection page...")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="https://aavetoks-claim.site")
         logger.info(f"User {user_id} requested to connect to {platform}.")
+
+    elif query.data == 'back':
+        # Go back to the main menu
+        await show_main_menu(update, context)
 
 # Function to log unhandled messages
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
