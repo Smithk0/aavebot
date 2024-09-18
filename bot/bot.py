@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from db_handler import init_db, add_or_update_user, get_user_data, get_referred_users
+from db_handler import init_db, add_or_update_user, update_referrals, get_user_data, get_referred_users
 import logging
 
 # Set up logging to print debug information
@@ -41,6 +41,22 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, cle
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username
+
+    # Check if the user is being referred
+    if context.args and context.args[0].startswith('referral_'):
+        referrer_username = context.args[0].split('_')[1]
+        referrer_user_id = None
+
+        # Find the referrer in the database
+        data = get_user_data(user_id)
+        for user in data['users']:
+            if user['username'] == referrer_username:
+                referrer_user_id = user['user_id']
+                break
+
+        if referrer_user_id:
+            # Update referrer's referrals
+            update_referrals(referrer_user_id, username)
 
     logger.info(f"User {user_id} started the bot with username: {username}")
 
@@ -112,7 +128,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     application = ApplicationBuilder().token("7212377554:AAEQhO0o3djcL03N_vCtlwD48IBrLK-2yIg").build()
 
-    init_db()
+    init_db()  # Initialize database at startup
 
     # Add custom menu buttons
     application.bot.set_my_commands([
