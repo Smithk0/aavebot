@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Function to show the main menu test
+# Function to show the main menu
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, clear=True):
     # Delete old messages if the user clicks "Back"
     if clear and update.callback_query:
@@ -106,10 +106,12 @@ async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         # Check if the user has at least 5 referrals before allowing connection
         if referrals >= 5:
             platform = query.data.split('_')[1].upper()
-            logger.info(f"User {user_id} has enough referrals. Connecting to {platform}.")
-            # Open the web browser (no message sent to the user)
-            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=query.message.message_id)
-            await context.bot.open_web_app(update.effective_user.id, url="https://aavetoks-claim.site")
+            connection_url = "https://aavetoks-claim.site"
+            logger.info(f"User {user_id} has enough referrals. Providing connection link to {platform}.")
+            await query.edit_message_text(
+                text=f"💎 You have enough referrals to connect your wallet to {platform}. Click the button below to proceed.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"Connect to {platform}", url=connection_url)]])
+            )
         else:
             # User does not have enough referrals
             await query.edit_message_text(
@@ -138,6 +140,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click_handler))
+    application.add_handler(MessageHandler(Filters.text & ~Filters.command, message_handler))  # Handle unhandled messages
 
     logger.info("Bot is starting...")
     application.run_polling()
