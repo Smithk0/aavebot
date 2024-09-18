@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Function to show the main menu
+# Function to show the main menu test
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, clear=True):
     # Delete old messages if the user clicks "Back"
     if clear and update.callback_query:
