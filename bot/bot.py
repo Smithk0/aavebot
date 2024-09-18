@@ -19,18 +19,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_or_update_user(user_id, username)
 
+    # Define the keyboard layout with two buttons on each line
     keyboard = [
-        [InlineKeyboardButton("Check Wallet", callback_data='check_wallet')],
-        [InlineKeyboardButton("Generate Referral Link", callback_data='generate_referral')],
-        [InlineKeyboardButton("Connect TON", callback_data='connect_ton')],
-        [InlineKeyboardButton("Connect ETH", callback_data='connect_eth')],
+        [InlineKeyboardButton("Check Wallet", callback_data='check_wallet'), InlineKeyboardButton("Generate Referral Link", callback_data='generate_referral')],
+        [InlineKeyboardButton("Referral List", callback_data='referral_list'), InlineKeyboardButton("Join Community", url="https://t.me/YourCommunityLink")],
+        [InlineKeyboardButton("Connect TON", callback_data='connect_ton'), InlineKeyboardButton("Connect ETH", callback_data='connect_eth')],
         [InlineKeyboardButton("Connect TRON", callback_data='connect_tron')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    # Updated message format
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Welcome to the AAVE token bot! Use the buttons below to manage your wallet and referrals:",
+        text=(
+            "AAVE is here! Your simple and fun Telegram meme token.\n\n"
+            "Get started with our AAVE Telegram mini app to farm points and unlock exciting rewards. 🎁\n\n"
+            "Got friends? Invite them and earn even more! 🌱\n\n"
+            "Don’t miss out—AAVE is where your crypto journey grows! 🌟"
+        ),
         reply_markup=reply_markup
     )
 
@@ -66,6 +72,12 @@ async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             await query.edit_message_text(text="You need at least 5 referrals to unlock rewards.")
         logger.info(f"Checked wallet for user {user_id}. Referrals: {referrals}, Balance: {balance}.")
 
+    elif query.data == 'referral_list':
+        referred_users = get_referred_users(user_id)
+        referred_users_list = "\n".join([f"- {user}" for user in referred_users]) or "No referred users yet."
+        await query.edit_message_text(text=f"Referred Users:\n{referred_users_list}")
+        logger.info(f"Sent referred users list to user {user_id}.")
+
     elif query.data.startswith('connect_'):
         platform = query.data.split('_')[1].upper()
         await query.edit_message_text(text=f"Connecting to {platform}...")
@@ -88,7 +100,6 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_click_handler))
-    application.add_handler(CommandHandler("start", start))  # Fallback for /start command
 
     logger.info("Bot is starting...")
     application.run_polling()
